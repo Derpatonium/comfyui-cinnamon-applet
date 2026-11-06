@@ -1,7 +1,7 @@
 # ComfyUI Cinnamon Applet
 
-A Cinnamon panel applet for launching a Docker Compose ComfyUI instance
-and managing its browser windows.
+A Cinnamon panel applet for launching and managing a ComfyUI instance
+running through Docker Compose.
 
 **Status: Experimental.**
 
@@ -24,21 +24,27 @@ own environment before relying on it.
 
 ## Features
 
-- Left-click cycles through detected ComfyUI windows.
-- Starts the Docker Compose service if it is not already running.
-- Opens a dedicated browser app window when necessary.
-- Opens a configured Terminator layout on cold start.
-- Right-click lists detected ComfyUI windows and provides launch actions.
+- Panel status indicator showing starting, running, or stopped.
+- Left-click cycles through detected ComfyUI browser windows.
+- Right-click menu provides window selection and launch actions.
+- Starts the configured Docker Compose project.
+- Opens ComfyUI in a dedicated browser app window.
+- Opens and manages a dedicated Terminator window.
+- Stops the ComfyUI service when the dedicated browser window has
+  remained closed for 30 seconds.
+- Provides an explicit Close ComfyUI action.
 
 ## Requirements
 
-- Linux Mint or another Cinnamon desktop.
-- X11 session.
-- Docker Engine with Docker Compose.
+- Cinnamon desktop running an X11 session.
+- Docker Engine with the Docker Compose plugin.
 - Python 3.
-- `wmctrl` and `xprop`.
-- A Chromium-based browser supporting the configured app-window options.
-- Terminator for the optional terminal layout.
+- `wmctrl`, `xprop`, and `flock`.
+- A browser supporting the `--app` command-line option.
+- Terminator.
+
+The applet has primarily been tested on Linux Mint 22.3 with
+Cinnamon 6.6.9 under X11.
 
 ## Installation
 
@@ -47,34 +53,50 @@ own environment before relying on it.
 3. Edit the configuration file created at
    `~/.config/comfyui-cinnamon-applet/config`
    (or the corresponding XDG configuration directory).
-4. Enable the applet in Cinnamon's Applets settings.
-5. Reload Cinnamon.
+4. Set `PROJECT_DIR` to the directory containing your ComfyUI
+   Docker Compose file.
+5. Adjust the URL, browser, window class, and terminal settings
+   for your system.
+6. Enable **ComfyUI Docker** in Cinnamon's Applets settings.
+7. Reload Cinnamon.
+
+The installer copies the applet and helper into your local Cinnamon
+applets directory. It does not install Docker, ComfyUI, a browser,
+or Terminator.
 
 ## Configuration
 
-The configuration file controls the Docker Compose project directory,
-ComfyUI URL, browser command and window classes, and terminal layout.
+The example configuration is in `config/config.example`.
 
-`TERMINAL_GEOMETRY` can be left empty to let the window manager position
-the terminal automatically.
-
-## Development
-
-- `applet/` contains the Cinnamon applet.
-- `scripts/` contains the helper script.
-- `config/` contains an example configuration.
+- `PROJECT_DIR`: Docker Compose project directory.
+- `COMFYUI_URL`: URL used to access ComfyUI.
+- `BROWSER`: Browser executable.
+- `APP_WM_CLASS`: WM_CLASS used to identify the ComfyUI app window.
+- `TERMINAL`: Terminal executable.
+- `TERMINAL_WM_CLASS`: WM_CLASS used to identify terminal windows.
+- `TERMINAL_ROLE`: Window role used to identify the dedicated terminal.
+- `TERMINAL_LAYOUT`: Terminator layout to open.
+- `TERMINAL_GEOMETRY`: Optional terminal geometry. Leave empty to
+  let the window manager position the window.
 
 Machine-specific configuration is stored outside this repository.
 
+## Development
+
+- `applet/` contains the Cinnamon applet and its icon.
+- `scripts/` contains the helper script.
+- `config/` contains an example configuration.
+- `install.sh` installs the applet for the current user.
+
 ## Limitations
 
-- Window detection uses X11 window titles and WM_CLASS values.
+- Window detection relies on X11 window information and WM_CLASS values.
 - Individual browser tabs cannot be enumerated; detection is based on
-  browser-window titles.
-- Testing has primarily been performed on Linux Mint 22.3 with
-  Cinnamon 6.6.9 under X11.
-- Compatibility with other distributions and Cinnamon versions has
-  not yet been established.
+  browser windows.
+- The automatic shutdown watcher monitors the specific browser window
+  opened or selected during startup.
+- Compatibility with Wayland, other distributions, and other Cinnamon
+  versions has not been established.
 
 ## Contributions
 
