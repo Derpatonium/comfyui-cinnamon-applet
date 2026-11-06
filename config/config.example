@@ -1,0 +1,16 @@
+# Copy this file to:
+# ~/.config/comfyui-cinnamon-applet/config
+
+PROJECT_DIR="$HOME/Projects/ComfyUI-Docker"
+COMFYUI_URL="http://127.0.0.1:8188/"
+
+BROWSER="brave-browser"
+APP_WM_CLASS="127.0.0.1.Brave-browser"
+BROWSER_WM_CLASS="brave-browser.Brave-browser"
+
+TERMINAL="terminator"
+TERMINAL_WM_CLASS="terminator.Terminator"
+TERMINAL_LAYOUT="ComfyUI-Docker"
+
+# Leave empty to let the window manager position the terminal.
+TERMINAL_GEOMETRY=""

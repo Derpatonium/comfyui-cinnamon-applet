@@ -1,0 +1,11 @@
+# Local configuration and secrets
+config/config
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editor and OS files
+.DS_Store
+*~

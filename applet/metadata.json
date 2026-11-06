@@ -1,0 +1,7 @@
+{
+    "uuid": "comfyui-docker@community",
+    "name": "ComfyUI Docker",
+    "description": "Docker Compose launcher and ComfyUI window manager",
+    "icon": "applications-graphics",
+    "max-instances": 1
+}
