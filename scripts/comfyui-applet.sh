@@ -26,6 +26,7 @@ TERM_ROLE="${TERMINAL_ROLE:-ComfyUI-Docker}"
 WATCH_LOCK="$HOME/.cache/comfyui-docker-watch.lock"
 STATUS_FILE="$HOME/.cache/comfyui-docker-starting"
 WINDOW_FILE="$HOME/.cache/comfyui-docker-window"
+STATE_LOCK="$HOME/.cache/comfyui-docker-state.lock"
 
 service_ready() {
     python3 - "$URL" <<'PYREADY' 2>/dev/null
@@ -181,6 +182,7 @@ watch_window() {
     flock -n 9 || return 0
 
     local id
+    local current_id
     local missing_since=0
 
     while true; do
@@ -200,7 +202,11 @@ watch_window() {
                 missing_since=$SECONDS
             elif (( SECONDS - missing_since >= 30 )); then
                 # Only stop if this is still the latest tracked window.
-                if [[ "$(cat "$WINDOW_FILE" 2>/dev/null || true)" == "$id" ]] &&
+                exec 8>"$STATE_LOCK"
+                flock -x 8
+
+                current_id="$(cat "$WINDOW_FILE" 2>/dev/null || true)"
+                if [[ "$current_id" == "$id" ]] &&
                    ! wmctrl -lx 2>/dev/null | awk -v id="$id" -v app="$APP_CLASS" '
                        $1 == id && $3 == app { found=1 }
                        END { exit !found }
@@ -209,8 +215,11 @@ watch_window() {
                     docker compose stop comfyui
                     rm -f "$STATUS_FILE" "$WINDOW_FILE"
                     close_terminal
+                    flock -u 8
                     return
                 fi
+
+                flock -u 8
                 missing_since=0
             fi
         fi
@@ -219,24 +228,50 @@ watch_window() {
 }
 start_comfyui() {
     mkdir -p "$HOME/.cache"
+
+    # Serialize startup against automatic and manual shutdown.
+    exec 8>"$STATE_LOCK"
+    flock -x 8
+
     touch "$STATUS_FILE"
 
     if ! ensure_comfyui; then
         rm -f "$STATUS_FILE"
+        flock -u 8
         return 1
     fi
     rm -f "$STATUS_FILE"
 
     local window
-    window="$(open_browser)"
-    open_terminator
+    if ! window="$(open_browser)"; then
+        rm -f "$WINDOW_FILE"
+        flock -u 8
+        return 1
+    fi
+
+    # Atomically publish the browser window ID for the watcher.
+    local temporary_window_file="${WINDOW_FILE}.$$"
+    printf '%s\n' "$window" > "$temporary_window_file"
+    mv -f "$temporary_window_file" "$WINDOW_FILE"
+
+    if ! open_terminator; then
+        flock -u 8
+        return 1
+    fi
 
     nohup "$0" watch-window \
         >/dev/null 2>&1 </dev/null &
+
+    flock -u 8
 }
 
 close_comfyui() {
-    rm -f "$STATUS_FILE"
+    mkdir -p "$HOME/.cache"
+    exec 8>"$STATE_LOCK"
+    flock -x 8
+
+    rm -f "$STATUS_FILE" "$WINDOW_FILE"
+
     while IFS='|' read -r id title; do
         [[ -n "$id" ]] && wmctrl -ic "$id"
     done < <(list_windows)
@@ -244,6 +279,8 @@ close_comfyui() {
     cd "$PROJECT"
     docker compose stop comfyui
     close_terminal
+
+    flock -u 8
 }
 
 cycle_windows() {
